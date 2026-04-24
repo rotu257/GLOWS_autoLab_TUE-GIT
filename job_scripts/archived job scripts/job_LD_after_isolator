@@ -1,0 +1,37 @@
+#!/bin/bash
+
+i=1
+counter=1
+echo 'STARTING MEASUREMENT'
+
+setinstrument_CLD1015 --state ON 1
+
+# loop to increase the current with value Amp
+for volts in $(seq 0.0 0.001 0.3)
+
+do
+# display value of the current
+echo $volts
+
+ #set the current
+setinstrument_CLD1015 --current $volts 1
+    sleep 3
+
+# acquiring from PM
+#get_fpm8210 -o filename$i
+#get_pm400 -o measurement_file$i
+#get_pm400 -w 980 -o measurement_file${i}
+get_hp81532A_powermeter -w 980 -a 1 -o current${volts}meas${i}.txt
+
+    sleep 1
+
+i=$(($i+1))
+done
+
+
+#### To turn off pump afterwards ###
+echo 'FINISHING MEASUREMENT, TURNING LASER OFF AND CHECKING STATE'
+setinstrument_CLD1015 --current 0.00 1
+setinstrument_CLD1015 --state OFF 1
+setinstrument_CLD1015 -c "*CLS" 1
+setinstrument_CLD1015 -q "*OPC?" 1

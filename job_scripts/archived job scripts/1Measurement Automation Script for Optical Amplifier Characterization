@@ -1,0 +1,165 @@
+#!/bin/bash
+
+# =========================================================================================================================================================
+# Measurement Automation Script for Optical Amplifier Characterization
+# =========================================================================================================================================================
+#
+# What this script does:
+# -----------------------
+# This script fully automates the characterization of an optical amplifier 
+# (typically an EDFA or similar doped-fiber amplifier) by performing a 
+# systematic 2D sweep of:
+#   1. Pump power  → controlled via Thorlabs CLD1015 laser diode driver 
+#                     (0.0 A to 0.60 A in 10 mA steps)
+#   2. Signal input power → controlled via an optical variable attenuator 
+#                           (from ~10 dB down to 1 dB attenuation in -2 dB steps)
+#
+# Instruments controlled and data acquired:
+#   • Keysight N7714A      – 1550 nm signal laser source (turned ON at start, OFF at end)
+#   • Variable Optical Attenuator – sets input signal power level
+#   • Thorlabs CLD1015     – pump laser current control (980 nm typically)
+#   • Yokogawa AQ6370D     – optical spectrum analyzer (full spectrum save)
+#   • HP 70952B (old OSA)  – two separate traces:
+#                            • 900–1000 nm  (pump wavelength region)
+#                            • 1540–1560 nm (signal & ASE region)
+#   • ILX FPM-8210         – fast power meter
+#   • Santec MPM-210H      – high-precision power meter (records both dBm and Watts)
+#   • Thorlabs PM400       – dual-wavelength power meter (980 nm pump + 1550 nm signal)
+#
+# Output:
+#   All data files are automatically named with a running index $i and the 
+#   current attenuation value (e.g., filename23_atten5, pm400_measurement_1550_file47_atten7, etc.)
+#
+# Use case:
+#   Ideal for gain, noise figure, ASE, saturation, and pump leakage measurements 
+#   on Erbium-doped or other fiber amplifiers in a single automated run.
+#
+# Requirements:
+#   All instrument control scripts (setinstrument_CLD1015, getinstrument_yokogawa_AQ6370D, 
+#   set_optical_attenuator, etc.) must be available in PATH.
+#
+# =============================================================================
+
+i=1
+echo 'STARTING MEASUREMENT'
+
+# Turn on 1550 nm signal source (Keysight N7714A)
+set_LD_Keysight_7714A_GPIB -S 3 -w 1.55e-6 -o 1
+
+# Initial attenuator setting (low attenuation = higher input power)
+set_optical_attenuator --action set_attenuation --value 10
+
+# Turn on pump laser driver
+setinstrument_CLD1015 --state ON 1
+
+# =============================================================================
+# Main measurement loops
+# =============================================================================
+
+# Outer loop: decrease attenuation (i.e. increase input signal power)
+for DB in $(seq 11 -2 1)
+do
+    echo "=== Attenuation = $DB dB ==="
+    set_optical_attenuator --action set_attenuation --value $DB
+
+    # Inner loop: sweep pump current from 0 to 600 mA in 10 mA steps
+    for volts in $(seq 0.0 0.010 0.600)
+    do 
+        echo "   Pump current = $volts A  (point $i)"
+        
+        # Set pump current
+        setinstrument_CLD1015 --current $volts 1
+        sleep 1
+
+        # === Data acquisition from all instruments ===
+        
+        # Yokogawa AQ6370D (full spectrum)
+        getinstrument_yokogawa_AQ6370D -o filename${i}_atten${DB}
+
+        # HP 70952B OSA – pump region
+        get_hp70952b_OSA_gpib -f pump_filename${i}_atten${DB} --start-wl 900 --stop-wl 1000
+        
+        # HP 70952B OSA – signal + ASE region
+        get_hp70952b_OSA_gpib -f signal_filename${i}_atten${DB} --start-wl 1540 --stop-wl 1560
+
+        # ILX FPM-8210 power meter
+        get_fpm8210 -o filename${i}
+
+        # Santec MPM-210H (dBm and Watts)
+        get_mpm210h_const1 measure --unit DBM --data-file mpm210H_measurement_data_DBM${i}_atten${DB} --meta-file mpm210H_measurement_meta_DBM${i}_atten${DB}.txt
+        sleep 1
+        get_mpm210h_const1 measure --unit W --data-file mpm210H_measurement_data_Watts${i}_atten${DB} --meta-file mpm210H_measurement_meta_watts${i}_atten${DB}.txt
+
+        # Thorlabs PM400 (980 nm pump and 1550 nm signal)
+        get_pm400 -w 980  -o pm400_measurement_980_file${i}_atten${DB}
+        sleep 5
+        get_pm400 -w 1550 -o pm400_measurement_1550_file${i}_atten${DB}
+
+        i=$((i+1))
+    done
+done
+
+# =============================================================================
+# Cleanup – safely turn everything off
+# =============================================================================
+
+echo 'FINISHING MEASUREMENT – TURNING LASERS OFF'
+set_LD_Keysight_7714A_GPIB -S 3 -w 1.55e-6 -o 0        # Disable 1550 nm source
+setinstrument_CLD1015 --current 0.00 1                # Pump current to zero
+setinstrument_CLD101ここ5 --state OFF 1                # Turn driver output OFF
+setinstrument_CLD1015 -c "*CLS" 1                     # Clear status
+setinstrument_CLD1015 -q "*OPC?" 1                    # Wait for operation complete
+
+echo 'MEASUREMENT COMPLETE – ALL LASERS OFF'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# =========================================================================================================================================================
+# Automated Optical Measurement Script for Pump-Probe Experiments (980 nm Pump + 1550 nm Probe)
+# =========================================================================================================================================================

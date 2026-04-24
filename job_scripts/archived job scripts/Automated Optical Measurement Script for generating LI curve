@@ -1,0 +1,70 @@
+#!/bin/bash
+
+i=1
+
+echo "################"
+echo "STARTING MEASUREMENT"
+echo "################"
+
+# Turn on laser driver
+setinstrument_CLD1015 --state ON 1
+
+
+# Sweep current (A)
+for current in 0.060 0.065 0.070 0.080; do #$(seq 0 0.001 0.100); do
+echo "################"
+echo "980nm LD set to ${current} A"
+echo "################"
+
+setinstrument_CLD1015 --current $current 1
+
+## acquire from thorlabs PM400 multi wavelength power meter
+sleep 2
+get_pm400 -w 980 -o pm400${i}_980_pump${current}
+
+done
+
+echo '######################################'
+echo 'FINISHED PUMP_power LOOP'
+echo '######################################'
+setinstrument_CLD1015 --current 0.00 1
+
+
+
+
+
+
+
+
+
+for power_dBm in -10 -5 0 5 10; do
+echo "################"
+echo "probe_power set to ${power_dBm} dBm"
+echo "################"
+set_optical_attenuator --action set_power --value "${power_dBm}"
+
+
+## acquire from MPM210 multi wavelength power meter
+sleep 2
+#get_mpm210h_const1 measure --unit DBM --data-file mpm${i}pump0.0A_probe${power_dBm}dBm --meta-file mpmMETAFILE${i}pump0.0A_probe${power_dBm}dBm.txt
+done
+
+echo '######################################'
+echo 'FINISHED PROBE_power LOOP'
+echo '######################################'
+
+
+
+
+
+
+
+
+echo 'FINISHING MEASUREMENT, TURNING LASER OFF AND CHECKING STATE'
+setinstrument_CLD1015 --current 0.00 1
+setinstrument_CLD1015 --state OFF 1
+setinstrument_CLD1015 -c "*CLS" 1
+setinstrument_CLD1015 -q "*OPC?" 1
+set_optical_attenuator --action set_power --value -70
+
+echo 'FINISHING MEASUREMENT'

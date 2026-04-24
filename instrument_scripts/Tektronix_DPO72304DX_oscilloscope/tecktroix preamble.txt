@@ -1,0 +1,18 @@
+Index 	                     : Field										fullMeaning
+0  	: 1						                                   				:Byte format version
+1  	: 8										                                :Bits per data point
+2  	: ASCII									                               	:Encoding (could be ASCII, RIBinary, FPBinary, etc.)
+3  	: RI									                               	:Data format: RI = Real Integer
+4  	: MSB									                              	:Byte order (Most Significant Byte first)
+5  	: "Ch3,DCcoupling,10.00mV/div,40.00us/div,1000 points,Sample mode"		:Channel and acquisition info
+6  	: 1000                  → Number of data points				         	:Number of data points
+7  	: Y                    → Vertical axis label			         		:Vertical axis label (Y-axis)
+8  	: "s"                  → Time unit						                :Horizontal unit (seconds)
+9  	: 400.0000E-9          → XINCR							                :XINCR: Time between points (400 ns)
+10 	: 191.8890E-9          → XZERO							                :XZERO: Horizontal reference point
+11 	: 500                  → PT_OFF							                :PT_OFF: Index of the first data point (usually 0 or middle sample)
+12 	: "V"                  → Y-unit							                :Y-axis unit (Volts)
+13 	: 250.0000E-6          → YMULT							                :YMULT: Voltage scale factor per code (400 µV/LSB)
+14 	: -62.5000             → YOFF							                :YOFF: Vertical offset in codes (digital offset)
+15 	: 0.0000               → YZERO							                :YZERO: Vertical reference voltage (11.5 mV)
+16 	: 1										                                :Possibly a flag (e.g., window mode or status)

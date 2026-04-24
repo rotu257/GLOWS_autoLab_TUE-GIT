@@ -1,0 +1,142 @@
+#!/bin/bash
+
+# =============================================================================
+# Automated Optical Measurement Script for Pump-Probe Experiments (980 nm Pump + 1550 nm Probe) COMPLETE DATA SET AT preCHIP and postCHIP
+# =============================================================================
+
+i=1
+
+echo "################"
+echo "STARTING MEASUREMENT"
+echo "################"
+
+# Turn on laser driver
+setinstrument_CLD1015 --state ON 1
+
+# Initial probe_power value
+set_optical_attenuator --action set_attenuation --value 90
+
+
+# GET STATE OF TUNALBLE LASER SOURCE BEFORE Sweep probe_power (dB label per user request) using attenuator
+#set_LD_Keysight_7714A_GPIB -S 3 --status
+#for atten_dB in $(seq 35 -5 5); do
+for atten_dB in 35; do
+  echo "################"
+  echo "probe_power set to ${atten_dB} dB"
+  echo "################"
+  set_optical_attenuator --action set_attenuation --value "${atten_dB}"
+
+  # Sweep current (A)
+#  for current in 0.050 0.055 0.060 0.065 0.070 0.075 0.080 0.085 0.090; do
+  for current in $(seq 0.039 0.003 0.090); do
+    echo "################"
+    echo "980nm LD set to ${current} A"
+    echo "################"
+
+    setinstrument_CLD1015 --current "${current}" 1
+    sleep 3
+
+#      # First signal generator (192.168.1.50)
+#        set_TTI_TGR2053_SIG_GEN \
+#        -i 192.168.1.50 \
+#        --ook \
+#        --bitseq "0101010101010101010101010101010" \
+#        --bitrate 1000
+#        --ook-mode TRIGGERED
+#        --trigger-source external+ve
+#        --trigger-type finite
+#        --trigger-mode block
+#        set_TTI_TGR2053_SIG_GEN -i 192.168.1.50 -cls
+#      # Second signal generator (192.168.1.51)
+#        set_TTI_TGR2053_SIG_GEN \
+#        -i 192.168.1.51 \
+#        --ook \
+#        --bitseq "0101010101010101010101010101010" \
+#        --bitrate 1000
+#        --ook-mode TRIGGERED
+#        --trigger-source external+ve
+#        --trigger-type finite
+#        --trigger-mode block
+#        set_TTI_TGR2053_SIG_GEN -i 192.168.1.51 -cls
+
+
+
+#      # Acquire from the Keysight InfiniiVision 2000X
+#        get_keysight_infiniivision_2000x \
+#        -c CHAN3,CHAN4 \
+#        -f "agilent_OSCwaveform_${i}_CH3pump${current}A_${seqlabel}_1kbps_CH4probe${atten_dB}dB" \
+#        --force
+#      # Acquire from the Tektronix DPO72304DX
+#        get_Tektronix_DPO72304DX_oscilloscope_ASCII \
+#        -c CH3,CH4 \
+#        -f "tektronix_OSCwaveform_${i}_CH3pump${current}A_${seqlabel}_200bps_CH4probe_${atten_dB}dB" \
+#        --force
+#      # Acquire from the KEYSIGHT_DSOX6002A
+#        getTCP_KEYSIGHT_DSOX6002A \
+#        -c CHAN1,CHAN2 \
+#        -f "DSOX6002A_OSCwaveform_${i}_1kbps_CH1pump${current}A_1kbps_CH2probe_${atten_dB}dB" \
+#        --force --csv
+
+
+
+#      # acquire from the OLD HP 7095B spectrum analyser
+#        get_hp70952b_OSA_gpib \
+#        -f HP70952B_OSA_PUMPfilename${i}pump${current}A_probe${atten_dB}dB \
+#        --start-wl 973 \
+#        --stop-wl 977 \
+#        -p 800 \
+#        --sens -65 \
+#        --res-bw 0.1 \
+#        --ref-level -45
+#        sleep 1
+
+#        get_hp70952b_OSA_gpib \
+#        -f HP70952B_OSA_PROBEfilename${i}pump${current}A_probe${atten_dB}dB \
+#        --start-wl 1545 \
+#        --stop-wl 1560 \
+#        -p 800 \
+#        --sens -65 \
+#        --res-bw 0.1 \
+#        --ref-level -45
+
+
+#      # acquire from santec mpm-210H 1550 power meter
+#        sleep 1
+#        get_mpm210h_const1 measure \
+#        --unit DBM \
+#        --data-file mpm${i}pump${current}A_probe${power_}dB \
+#        --meta-file mpmMETAFILE${i}pump${current}A_probe${atten_dB}dB.txt
+#      # acquire from thorlabs PM400 multi wavelength power meter at chip input
+#        get_pm400 -w 980 --stable --stable-rel 0.002 --stable-window 10 -o pm400FILE${i}_980_pump${current}A
+#        sleep 0.5
+#        get_pm400 -w 1550 --stable --stable-rel 0.002 --stable-window 10 -o pm400FILE${i}_1550_probe${atten_dB}dB
+      # acquire from hp81532A_PM meter at chip output
+        get_hp81532A_powermeter -w 1550 -o hp81532A_PM${i}_1550_probe${atten_dB}dB
+        sleep 1
+        get_hp81532A_powermeter -w 975 -o hp81532A_PM${i}_975_pump${current}A
+
+
+
+      i=$((i + 1))
+      sleep 0
+
+  done
+
+  echo '######################################'
+  echo 'FINISHED CURRENT LOOP'
+  echo '######################################'
+  sleep 1
+done
+
+echo '######################################'
+echo 'FINISHED probe_power LOOP'
+echo '######################################'
+
+echo 'FINISHING MEASUREMENT, TURNING LASER OFF AND CHECKING STATE'
+setinstrument_CLD1015 --current 0.00 1
+setinstrument_CLD1015 --state OFF 1
+setinstrument_CLD1015 -c "*CLS" 1
+setinstrument_CLD1015 -q "*OPC?" 1
+set_optical_attenuator --action set_attenuation --value 90
+
+echo 'FINISHING MEASUREMENT'

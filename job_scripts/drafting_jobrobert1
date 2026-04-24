@@ -1,0 +1,92 @@
+#!/bin/bash
+
+# =============================================================================
+# Automated Optical Measurement Script for ANTONIO MICRO RING DYNAMICS
+# =============================================================================
+
+i=1
+
+echo "################"
+echo "STARTING MEASUREMENT"
+echo "################"
+
+# Turn on 81949A model case with 8163B Tunable Laser
+set_LASER_81949Atunablelaser --slot 1 status
+set_LASER_81949Atunablelaser --slot 1 set-pwr 8
+set_LASER_81949Atunablelaser --slot 1 output on
+
+# Initial Santec attenuator value
+set_optical_attenuator --action set_attenuation --value 90
+
+#$resonanceWL = 1551
+
+# Sweep atten (dB label per user request)
+#for power_dB in 40; do
+for power_dB in $(seq 10 -5 0); do
+  echo "################"
+  echo "Attenuator set to ${power_dB} dB"
+  echo "################"
+
+  set_optical_attenuator --action set_attenuation --value "${power_dB}"
+
+
+    ##########################################################################################################################
+                        #BLUE SHIFT SCAN STARTS FROM HERE
+    ##########################################################################################################################
+    # Sweep 81949A model case with 8163B Tunable Laser wavelength (nm label per user request) BLUE SHIFT SCAN
+    #for wavelength in 1556; do
+    for wavelength in $(seq 1551 0.05 1552); do
+        echo "################"
+        echo "Keysight_8163B set to ${wavelength} nm"
+        echo "################"
+
+
+        set_LASER_81949Atunablelaser --slot 1 set-wl "${wavelength}"
+
+
+        # Acquire from the Keysight InfiniiVision 2000X
+        get_keysight_infiniivision_2000x -c CHAN3,CHAN4 -f "agilent_OSCwaveform_${i}_REDSHIFTFROM__1551_Scan_${wavelength}nm_1kbps${power_dB}dB" --force
+
+
+        i=$((i + 1))
+        sleep 2
+
+    done
+
+    ##########################################################################################################################
+                            #RED SHIFT SCAN STARTS FROM HERE
+    ##########################################################################################################################
+
+    for wavelength in $(seq 1551 -0.05 1550); do
+        echo "################"
+        echo "Keysight_8163B set to ${wavelength} nm"
+        echo "################"
+
+        resonanceWL in 1551
+
+        set_LASER_81949Atunablelaser --slot 1 set-wl "${wavelength}"
+
+
+        # Acquire from the Keysight InfiniiVision 2000X
+        get_keysight_infiniivision_2000x -c CHAN3,CHAN4 -f "agilent_OSCwaveform_${i}_BLUESHIFT_FROM_1551_Scan_${wavelength}nm_1kbps${power_dB}dB" --force
+
+        i=$((i + 1))
+        sleep 2
+
+    done
+
+
+  echo '######################################'
+  echo 'FINISHED CUR LOOP'
+  echo '######################################'
+  sleep 1
+done
+
+echo '######################################'
+echo 'FINISHED LOOP'
+echo '######################################'
+
+echo 'FINISHING MEASUREMENT, TURNING LASER OFF AND CHECKING STATE'
+set_LASER_81949Atunablelaser --slot 1 output off
+set_optical_attenuator --action set_attenuation --value 90
+echo 'FINISHING MEASUREMENT'

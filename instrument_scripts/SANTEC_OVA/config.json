@@ -1,0 +1,11 @@
+{
+    "device_info": "SANTEC,OVA,2402256,02.05.05",
+    "wavelength": "1550",
+    "attenuation": "60.00",
+    "power_setpoint": "0.00",
+    "absolute_power_mode": "0",
+    "power_leveling": "1",
+    "drift_tolerance": "112820680",
+    "beam_block": "0",
+    "interaction_mode": "1"
+}

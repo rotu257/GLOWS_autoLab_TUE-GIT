@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+GLOWS_autoLab_python3_venv/
+
+# Local configs and secrets
+.env
+configs/local_*.json
+configs/local_*.yaml
+configs/*.local.json
+configs/*.local.yaml
+
+# Data and output files
+data/
+results/
+outputs/
+*.csv
+*.tsv
+*.h5
+*.hdf5
+*.mat
+*.tdms
+*.npy
+*.npz
+*.log
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/

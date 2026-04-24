@@ -1,0 +1,149 @@
+#!/bin/bash
+# =============================================================================
+# Automated Optical Measurement Script for Pump-Probe Experiments (980 nm Pump + 1550 nm Probe)
+# =============================================================================
+# What this script does:
+# • Turns on a 980 nm pump laser (CLD1015 controller), the optical attenuator and a 1550 nm probe laser (Keysight N7714A)
+# • Sets OOK modulation on two TTi TGR2053 signal generators based on their IP addresses
+#
+# CHANGED: outer loop = SIGEN2 • inner loop = SIGEN1
+#          (SIGEN1 command executed before SIGEN2 in each combination)
+
+i=1
+
+echo "################"
+echo "STARTING MEASUREMENT"
+echo "################"
+
+# Turn on laser driver
+setinstrument_CLD1015 --state OFF 1
+#setinstrument_CLD1015 --state ON 1
+
+# Initial probe_power value
+set_optical_attenuator --action set_power --value -80
+
+# Bit sequences for signal generator 1 (shorter sequences, 200 bit/s)
+bitseq1s=(
+  "0011111100"
+)
+
+# Bit sequences for signal generator 2 (longer sequences, 1000 bit/s)
+bitseq2s=(
+  "111111111100000000000000000000"
+  "001110000000001000010000011100"
+  "001110100101001010010100011100"
+  "001111111001101000100101011100"
+  "001000000000000000000001111100"
+  "001110001100110100100110011100"
+)
+
+# ────────────────────────────────────────────────
+# Outer loop: SIGEN2 (faster / longer patterns)
+# ────────────────────────────────────────────────
+for idx2 in "${!bitseq2s[@]}"; do
+    bitseq2="${bitseq2s[$idx2]}"
+    seqlabel2="seq$((idx2 + 1))"
+    echo "SIGEN2 to use bit sequence ${seqlabel2}: ${bitseq2}"
+
+    # Inner loop: SIGEN1 (slower / shorter patterns)
+    for idx1 in "${!bitseq1s[@]}"; do
+        bitseq1="${bitseq1s[$idx1]}"
+        seqlabel1="seq$((idx1 + 1))"
+        echo "SIGEN1 to use bit sequence ${seqlabel1}: ${bitseq1}"
+
+        # First signal generator  (192.168.1.50 – usually the slower one)
+        set_TTI_TGR2053_SIG_GEN \
+            -i 192.168.1.50 \
+            --ook \
+            --bitseq "${bitseq1}" \
+            --bitrate 200
+        set_TTI_TGR2053_SIG_GEN -i 192.168.1.50 -cls
+
+        # Second signal generator (192.168.1.51 – usually the faster one)
+        set_TTI_TGR2053_SIG_GEN \
+            -i 192.168.1.51 \
+            --ook \
+            --bitseq "${bitseq2}" \
+            --bitrate 1000
+        set_TTI_TGR2053_SIG_GEN -i 192.168.1.51 -cls
+
+        # Sweep probe_power (dBm label per user request)
+        for power_dBm in 1; do
+            echo "################"
+            echo "probe_power set to ${power_dBm} dBm"
+            echo "################"
+            set_optical_attenuator --action set_power --value "${power_dBm}"
+
+            # Sweep current (A)
+            for current in 0.065 0.075 0.085 0.095; do
+                echo "################"
+                echo "980nm LD set to ${current} A"
+                echo "################"
+
+                setinstrument_CLD1015 --current "${current}" 1
+
+                sleep 6
+
+                # Acquire from the Keysight InfiniiVision 2000X
+                get_keysight_infiniivision_2000x \
+                    -c CHAN3,CHAN4 \
+                    -f "agilent_OSCwaveform_${i}_CH3pump${current}A_${seqlabel1}_200bps_CH4probe${power_dBm}dBm" \
+                    --force
+
+                # Acquire from the Tektronix DPO72304DX
+                get_Tektronix_DPO72304DX_oscilloscope_ASCII \
+                    -c CH3,CH4 \
+                    -f "tektronix_OSCwaveform_${i}_CH3pump${current}A_${seqlabel1}_200bps_CH4probe_${power_dBm}dBm" \
+                    --force
+
+                # acquire from santec mpm-210H 1550 power meter
+                sleep 1
+                get_mpm210h_const1 measure --unit DBM --data-file mpm${i}pump${current}A_probe${power_dBm}dBm --meta-file mpmMETAFILE${i}pump${current}A_probe${power_dBm}dBm.txt
+
+                # acquire from thorlabs PM400 multi wavelength power meter
+                sleep 0
+                get_pm400 -w 980 -o pm400${i}_980_pump${current}A_probe${power_dBm}dBm
+
+                # acquire from the OLD HP 7095B spectrum analyser
+                sleep 0
+                get_hp70952b_OSA_gpib -f HP70952B_OSA_PUMPfilename${i}pump${current}A_probe${power_dBm}dBm --start-wl 973 --stop-wl 977 -p 800 --sens -55 --res-bw 0.2 --ref-level -67
+                sleep 1
+                get_hp70952b_OSA_gpib -f HP70952B_OSA_PROBEfilename${i}pump${current}A_probe${power_dBm}dBm --start-wl 1545 --stop-wl 1560 -p 800 --sens -55 --res-bw 0.2 --ref-level -67
+
+                i=$((i + 1))
+
+            done   # current loop
+
+            echo '######################################'
+            echo 'FINISHED CURRENT LOOP'
+            echo '######################################'
+            sleep 0
+
+        done   # power_dBm loop
+
+        echo '######################################'
+        echo 'FINISHED probe_power LOOP'
+        echo '######################################'
+        sleep 0
+
+    done   # inner: SIGEN1 loop
+
+    echo '######################################'
+    echo 'FINISHED BIT SEQUENCE SIGEN1 LOOP'
+    echo '######################################'
+    sleep 0
+
+done   # outer: SIGEN2 loop
+
+echo '######################################'
+echo 'FINISHED ALL BIT SEQUENCE COMBINATIONS'
+echo '######################################'
+
+echo 'FINISHING MEASUREMENT, TURNING LASER OFF AND CHECKING STATE'
+setinstrument_CLD1015 --current 0.00 1
+setinstrument_CLD1015 --state OFF 1
+setinstrument_CLD1015 -c "*CLS" 1
+setinstrument_CLD1015 -q "*OPC?" 1
+set_optical_attenuator --action set_power --value -80
+
+echo 'FINISHING MEASUREMENT'

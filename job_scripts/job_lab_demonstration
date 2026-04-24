@@ -1,0 +1,47 @@
+#!/bin/bash
+
+pause() {
+  # Press Enter to continue; Ctrl+C to abort.
+  read -r -p "${1:-Press Enter to continue... }"
+}
+
+# ==========================================================================================================
+# SPIKING DEMONSTRATION :  THIS IS TO SHOW ASE SPONTANEOUS EMISSION, DECAY ROLL OFF
+# ==========================================================================================================
+set_TTI_TGR2053_SIG_GEN -i 192.168.1.50 --bitrate 1000 --ook --bitseq "101010101010101010101010101010" --ook-mode triggered --trigger-mode block --trigger-source external+ve --trigger-type finite
+
+# Set Pump laser driver
+setinstrument_CLD1015 --state ON 1
+
+setinstrument_CLD1015 --current 0.000 1
+# set probe_power value
+set_optical_attenuator --action set_attenuation --value 90
+
+pause "Set: current=40, attenuation=30. Press Enter to continue..."
+
+# Set Pump laser driver
+setinstrument_CLD1015 --current 0.100 1
+# set probe_power value
+set_optical_attenuator --action set_attenuation --value 90
+
+pause "Set: current=90, attenuation=30. Press Enter to continue..."
+
+
+# ==========================================================================================================
+# SPIKING DEMONSTRATION :  THIS IS TO SHOW DIFFERENT BIT SEQUENCE
+# ==========================================================================================================
+
+set_TTI_TGR2053_SIG_GEN -i 192.168.1.50 --bitrate 2000 --ook --bitseq "101010101010101010101010101010" --ook-mode triggered --trigger-mode block --trigger-source external+ve --trigger-type finite
+set_TTI_TGR2053_SIG_GEN -i 192.168.1.51 --bitrate 1000 --ook --bitseq "101010101010101010101010101010" --ook-mode triggered --trigger-mode block --trigger-source external+ve --trigger-type finite
+
+
+setinstrument_CLD1015 --current 0.100 1
+set_optical_attenuator --action set_attenuation --value 10
+
+
+
+pause "current=80, attenuation=10. Press Enter to finish..."
+setinstrument_CLD1015 --current 0.00 1
+
+setinstrument_CLD1015 --state OFF 1
+set_optical_attenuator --action set_attenuation --value 90

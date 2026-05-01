@@ -11,5 +11,5 @@ GLOWS_autoLab_TUE-GIT/
 ├── instrument_scripts/   # instrument-control scripts
 ├── job_scripts/          # experiment/job execution scripts
 ├── configs/              # example configuration files
-├── data/                 # local data folder, ignored by git
-└── results/              # local output folder, ignored by git
+├── data/                 # local data folder
+└── results/              # local output folder
